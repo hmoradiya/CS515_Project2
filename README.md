@@ -57,7 +57,6 @@ x = 20
 x = 20 + 5
 */
 y = 40
-# print 60
 print x, y
 output:
 20.0 40.0
