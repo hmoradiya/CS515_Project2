@@ -4,6 +4,8 @@ from typing import Any
 
 var = {}
 
+is_multiline_comment_started = False
+
 class token:
     typ: str
     val: str
@@ -14,6 +16,7 @@ class token:
 
     def __repr__(self):
         return f"token({self.typ!r}, {self.val!r})"
+
 
 def con_num(string):
     try:
@@ -148,7 +151,6 @@ def sub(ts: list[token], i: int) -> tuple[ast, int]:
         lhs = ast("-", lhs, rhs)
     return lhs, i
 
-
 def div(ts: list[token], i: int) -> tuple[ast, int]:
     if i >= len(ts):
         raise SyntaxError("expected subtraction, found EOF")
@@ -191,7 +193,6 @@ def exp(ts: list[token], i: int) -> tuple[ast, int]:
         la = ast("^", temp[t - 1], la)
         t = t - 1
     return la, i
-
 
 def conjunction(ts: list[token], i: int) -> tuple[ast, int]:
     if i >= len(ts):
@@ -299,7 +300,17 @@ while True:
     try:
         user_input = input()
         output = ""
-        if re.match(r"^\s*print\s+\w*", user_input, re.IGNORECASE):
+        if user_input.startswith("#"):
+            continue
+        elif user_input.startswith('''*/'''):
+            is_multiline_comment_started = False
+            continue
+        elif is_multiline_comment_started:
+            continue
+        elif user_input.startswith('''/*'''):
+            is_multiline_comment_started = True
+            continue
+        elif re.match(r"^\s*print\s+\w*", user_input, re.IGNORECASE):
             string = re.sub(r"^\s*print\s+", "",
                             user_input.rstrip(), re.IGNORECASE)
             test = string.split(",")
