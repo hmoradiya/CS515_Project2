@@ -1,6 +1,7 @@
-from typing import Any
 import re
 import math
+from typing import Any
+
 var = {}
 
 class token:
@@ -14,7 +15,7 @@ class token:
     def __repr__(self):
         return f"token({self.typ!r}, {self.val!r})"
 
-def convert_num(string):
+def con_num(string):
     try:
         float(string)
         return float(string)
@@ -52,7 +53,7 @@ def lex(s: str) -> list[token]:
                 s[end].isnumeric() or (s[end] == "." and s[end + 1].isnumeric())
             )
             num = s[i:end]
-            tokens.append(token("num", convert_num(num)))
+            tokens.append(token("num", con_num(num)))
             i = end
         elif s[i: i + 2] == "++":
             tokens.append(token("sym", "++"))
