@@ -284,11 +284,14 @@ def result(a: ast) -> float:
         return var
     elif a.typ == "val":
         return a.children[0]
-    elif a.typ == "var":
+    elif a.typ == 'var':
         if a.children[0] in var.keys():
             return var[a.children[0]]
-        else:
+        elif a.children[0] not in var.keys():
             var[a.children[0]] = 0.0
+            return var[a.children[0]]
+        else:
+            raise SyntaxError(f'unknown operation {a.typ}')
 
 while True:
     try:
