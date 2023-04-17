@@ -148,14 +148,6 @@ def sub(ts: list[token], i: int) -> tuple[ast, int]:
         lhs = ast("-", lhs, rhs)
     return lhs, i
 
-def mul(ts: list[token], i: int) -> tuple[ast, int]:
-    if i >= len(ts):
-        raise SyntaxError("expected subtraction, found EOF")
-    lhs, i = div(ts, i)
-    while i < len(ts) and ts[i].typ == "sym" and ts[i].val == "*":
-        rhs, i = div(ts, i + 1)
-        lhs = ast("*", lhs, rhs)
-    return lhs, i
 
 def div(ts: list[token], i: int) -> tuple[ast, int]:
     if i >= len(ts):
@@ -164,6 +156,15 @@ def div(ts: list[token], i: int) -> tuple[ast, int]:
     while i < len(ts) and ts[i].typ == "sym" and ts[i].val == "/":
         rhs, i = remainder(ts, i + 1)
         lhs = ast("/", lhs, rhs)
+    return lhs, i
+
+def mul(ts: list[token], i: int) -> tuple[ast, int]:
+    if i >= len(ts):
+        raise SyntaxError("expected subtraction, found EOF")
+    lhs, i = div(ts, i)
+    while i < len(ts) and ts[i].typ == "sym" and ts[i].val == "*":
+        rhs, i = div(ts, i + 1)
+        lhs = ast("*", lhs, rhs)
     return lhs, i
 
 def remainder(ts: list[token], i: int) -> tuple[ast, int]:
@@ -179,10 +180,10 @@ def exp(ts: list[token], i: int) -> tuple[ast, int]:
     if i >= len(ts):
         raise SyntaxError("expected subtraction, found EOF")
     temp = []
-    lhs, i = disj(ts, i)
+    lhs, i = disjunction(ts, i)
     temp.append(lhs)
     while i < len(ts) and ts[i].typ == "sym" and ts[i].val == "^":
-        rhs, i = disj(ts, i + 1)
+        rhs, i = disjunction(ts, i + 1)
         temp.append(rhs)
     t = len(temp) - 1
     la = temp[t]
@@ -192,39 +193,39 @@ def exp(ts: list[token], i: int) -> tuple[ast, int]:
     return la, i
 
 
-def disj(ts: list[token], i: int) -> tuple[ast, int]:
+def conjunction(ts: list[token], i: int) -> tuple[ast, int]:
     if i >= len(ts):
         raise SyntaxError("expected conjunction, found EOF")
-    lhs, i = conj(ts, i)
-    while i < len(ts) and ts[i].typ == "sym" and ts[i].val == "||":
-        rhs, i = conj(ts, i + 1)
-        lhs = ast("||", lhs, rhs)
-    return lhs, i
-
-def conj(ts: list[token], i: int) -> tuple[ast, int]:
-    if i >= len(ts):
-        raise SyntaxError("expected conjunction, found EOF")
-    lhs, i = neg(ts, i)
+    lhs, i = negative(ts, i)
     while i < len(ts) and ts[i].typ == "sym" and ts[i].val == "&&":
-        rhs, i = neg(ts, i + 1)
+        rhs, i = negative(ts, i + 1)
         lhs = ast("&&", lhs, rhs)
     return lhs, i
 
-def neg(ts: list[token], i: int) -> tuple[ast, int]:
+def disjunction(ts: list[token], i: int) -> tuple[ast, int]:
+    if i >= len(ts):
+        raise SyntaxError("expected conjunction, found EOF")
+    lhs, i = conjunction(ts, i)
+    while i < len(ts) and ts[i].typ == "sym" and ts[i].val == "||":
+        rhs, i = conjunction(ts, i + 1)
+        lhs = ast("||", lhs, rhs)
+    return lhs, i
+
+def negative(ts: list[token], i: int) -> tuple[ast, int]:
     if i >= len(ts):
         raise SyntaxError("expected negation, found EOF")
 
     if ts[i].typ == "sym" and ts[i].val == "!":
-        a, i = neg(ts, i + 1)
+        a, i = negative(ts, i + 1)
         return ast("!", a), i
     if ts[i].typ == "sym" and ts[i].val == "-":
-        a, i = neg(ts, i + 1)
+        a, i = negative(ts, i + 1)
         return ast("-", a), i
     if ts[i].typ == "sym" and ts[i].val == "--":
-        a, i = neg(ts, i + 1)
+        a, i = negative(ts, i + 1)
         return ast("--", a), i
     if ts[i].typ == "sym" and ts[i].val == "++":
-        a, i = neg(ts, i + 1)
+        a, i = negative(ts, i + 1)
         return ast("++", a), i
     else:
         return atom(ts, i)
@@ -261,27 +262,27 @@ def interp(a: ast, env: set[str]) -> bool:
         return interp(a.children[0], env) or interp(a.children[1], env)
     raise SyntaxError(f"unknown operation {a.typ}")
 
-def result(a: ast) -> float:
+def final_result(a: ast) -> float:
     if a.typ == "+":
-        return result(a.children[0]) + result(a.children[1])
+        return final_result(a.children[0]) + final_result(a.children[1])
     elif a.typ == "-" and len(a.children) > 1:
-        return result(a.children[0]) - result(a.children[1])
+        return final_result(a.children[0]) - final_result(a.children[1])
     elif a.typ == "-" and len(a.children) == 1:
-        return -result(a.children[0])
+        return -final_result(a.children[0])
     elif a.typ == "++" and len(a.children) == 1:
-        return result(ast("=", a.children[0], ast("+", a.children[0], ast("val", 1))))
+        return final_result(ast("=", a.children[0], ast("+", a.children[0], ast("val", 1))))
     elif a.typ == "--" and len(a.children) == 1:
-        return result(ast("=", a.children[0], ast("-", a.children[0], ast("val", 1))))
+        return final_result(ast("=", a.children[0], ast("-", a.children[0], ast("val", 1))))
     elif a.typ == "*":
-        return result(a.children[0]) * result(a.children[1])
+        return final_result(a.children[0]) * final_result(a.children[1])
     elif a.typ == "/":
-        return result(a.children[0]) / result(a.children[1])
+        return final_result(a.children[0]) / final_result(a.children[1])
     elif a.typ == "%":
-        return result(a.children[0]) % result(a.children[1])
+        return final_result(a.children[0]) % final_result(a.children[1])
     elif a.typ == "^":
-        return math.pow(result(a.children[0]), result(a.children[1]))
+        return math.pow(final_result(a.children[0]), final_result(a.children[1]))
     elif a.typ == "=":
-        var[a.children[0].children[0]] = result(a.children[1])
+        var[a.children[0].children[0]] = final_result(a.children[1])
         return var
     elif a.typ == "val":
         return a.children[0]
@@ -304,12 +305,12 @@ while True:
             test = string.split(",")
             for i in range(len(test)):
                 temp = parse(test[i])
-                output += f"{result(temp)} "
+                output += f"{final_result(temp)} "
             print(output.strip())
         elif user_input == "":
             continue
         else:
-            result(parse(user_input))
+            final_result(parse(user_input))
     except SyntaxError:
         print(f"parse error")
     except ZeroDivisionError:
